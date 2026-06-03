@@ -8,7 +8,7 @@
       name="description"
       content="基于学校官网或研招网来源，识别院校专业考试科目，并生成考研学习模块、资料清单和可打印 PDF 报告。"
     />
-    <link rel="stylesheet" href="styles.css?v=20260603-target-links-2" />
+    <link rel="stylesheet" href="styles.css?v=20260603-dynamic-materials" />
   </head>
   <body>
     <header class="topbar">
@@ -29,7 +29,7 @@
       <section class="panel input-panel" aria-labelledby="inputTitle">
         <div class="section-title">
           <p class="eyebrow">目标与来源</p>
-          <h2 id="inputTitle">选择院校和专业</h2>
+          <h2 id="inputTitle">选择院校、专业和代码</h2>
         </div>
 
         <form id="targetForm" class="target-form">
@@ -41,6 +41,10 @@
             <label>
               <span>专业</span>
               <input id="major" name="major" type="text" placeholder="例如：金融、计算机技术" autocomplete="off" />
+            </label>
+            <label>
+              <span>专业代码</span>
+              <input id="majorCode" name="majorCode" type="text" placeholder="例如：085404、025100" autocomplete="off" />
             </label>
             <label>
               <span>考试年份</span>
@@ -166,9 +170,10 @@
         <section class="panel plan-panel" aria-labelledby="modulesTitle">
           <div class="section-title">
             <p class="eyebrow">学习模块</p>
-            <h2 id="modulesTitle">输入学校后学习清单</h2>
+            <h2 id="modulesTitle">按专业代码生成学习资料</h2>
           </div>
           <div id="schoolChecklist" class="school-checklist"></div>
+          <div id="targetMaterials" class="target-materials"></div>
           <div id="moduleGrid" class="module-grid"></div>
         </section>
 
@@ -187,6 +192,6 @@
     </main>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
-    <script src="app.js?v=20260603-target-links-2" defer></script>
+    <script src="app.js?v=20260603-dynamic-materials" defer></script>
   </body>
 </html>

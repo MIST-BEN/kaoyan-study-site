@@ -418,6 +418,73 @@ textarea:focus {
   gap: 12px;
 }
 
+.target-materials {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.materials-summary {
+  align-items: flex-start;
+  background: #f8fbf9;
+  border: 1px solid #cbd8cf;
+  border-radius: 8px;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  padding: 14px;
+}
+
+.materials-summary h3,
+.material-card h3 {
+  margin: 0;
+  line-height: 1.25;
+}
+
+.materials-summary h3 {
+  font-size: 20px;
+}
+
+.materials-summary p {
+  color: var(--muted);
+  line-height: 1.55;
+  margin: 6px 0 0;
+}
+
+.materials-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.material-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.material-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.material-links a {
+  align-items: center;
+  background: var(--blue-soft);
+  border: 1px solid #c8dce8;
+  border-radius: 8px;
+  color: var(--blue);
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 800;
+  min-height: 34px;
+  padding: 0 10px;
+}
+
 .checklist-card {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -475,6 +542,7 @@ textarea:focus {
 
 .module-card ul,
 .checklist-card ul,
+.material-card ul,
 .print-report ul,
 .print-report ol {
   margin: 0;
@@ -483,6 +551,7 @@ textarea:focus {
 
 .module-card li,
 .checklist-card li,
+.material-card li,
 .print-report li {
   margin: 5px 0;
   line-height: 1.55;
@@ -568,6 +637,7 @@ textarea:focus {
   .subject-editor,
   .module-grid,
   .checklist-grid,
+  .materials-grid,
   .report-meta,
   .countdown-metrics {
     grid-template-columns: 1fr;
@@ -604,8 +674,13 @@ textarea:focus {
   button,
   .button-link,
   .topbar a,
-  .lookup-links a {
+  .lookup-links a,
+  .material-links a {
     width: 100%;
+  }
+
+  .materials-summary {
+    flex-direction: column;
   }
 
   .saved-card .saved-actions {
