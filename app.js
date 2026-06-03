@@ -81,7 +81,11 @@ function getTargets() {
 }
 
 function setTargets(targets) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(targets));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(targets));
+  } catch {
+    // If storage is blocked, keep the current session usable.
+  }
 }
 
 function getCurrentTarget() {
@@ -114,7 +118,11 @@ function applyTarget(target) {
 }
 
 function persistActive() {
-  localStorage.setItem(ACTIVE_KEY, JSON.stringify(getCurrentTarget()));
+  try {
+    localStorage.setItem(ACTIVE_KEY, JSON.stringify(getCurrentTarget()));
+  } catch {
+    // The live planner still works when browser storage is unavailable.
+  }
 }
 
 function loadActive() {
