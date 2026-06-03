@@ -20,7 +20,21 @@
 npx serve .
 ```
 
-发布到 GitHub Pages 时，将仓库 Pages 来源设置为 `main` 分支根目录即可。
+## 发布到 GitHub Pages
+
+默认目标仓库是 `MIST-BEN/kaoyan-study-site`。
+
+如果已经安装并登录 GitHub CLI：
+
+```powershell
+.\publish-to-github.ps1
+```
+
+如果没有 GitHub CLI：
+
+1. 在 GitHub 新建公开空仓库 `kaoyan-study-site`。
+2. 在本目录运行 `git push -u origin main`。
+3. 打开仓库 `Settings > Pages`，来源选择 `main` 分支根目录。
 
 ## 来源原则
 
