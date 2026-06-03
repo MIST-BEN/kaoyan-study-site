@@ -11,6 +11,7 @@ const el = {
   sourceText: document.querySelector("#sourceText"),
   pdfFile: document.querySelector("#pdfFile"),
   pdfStatus: document.querySelector("#pdfStatus"),
+  topYzLink: document.querySelector("#topYzLink"),
   analyzeBtn: document.querySelector("#analyzeBtn"),
   saveBtn: document.querySelector("#saveBtn"),
   clearBtn: document.querySelector("#clearBtn"),
@@ -353,15 +354,38 @@ function getPoliticsPlan() {
 }
 
 function buildSchoolLinks(target) {
-  const school = target.school || "目标院校";
-  const major = target.major ? ` ${target.major}` : "";
-  const query = encodeURIComponent(`${school}${major} 2027 硕士研究生 招生专业目录 考试科目 官网`);
-  const outlineQuery = encodeURIComponent(`${school}${major} 考研 考试大纲 参考书目 官网`);
+  const school = target.school.trim();
+  const major = target.major.trim();
+  const searchLabel = [school || "目标院校", major].filter(Boolean).join(" ");
+  const query = encodeURIComponent(`${searchLabel} 2027 硕士研究生 招生专业目录 考试科目 官网`);
+  const outlineQuery = encodeURIComponent(`${searchLabel} 考研 考试大纲 参考书目 官网`);
   return [
-    { label: "研招网硕士目录", href: "https://yz.chsi.com.cn/zsml/" },
-    { label: "学校专业目录检索", href: `https://www.bing.com/search?q=${query}` },
-    { label: "考试大纲/参考书检索", href: `https://www.bing.com/search?q=${outlineQuery}` },
+    {
+      label: school || major ? "研招网：按当前学校/专业" : "研招网硕士目录",
+      href: buildYzLink(target),
+      title: school || major ? `打开研招网并带上：${searchLabel}` : "打开研招网硕士专业目录",
+    },
+    {
+      label: "学校专业目录检索",
+      href: `https://www.bing.com/search?q=${query}`,
+      title: `检索：${searchLabel} 招生专业目录 考试科目`,
+    },
+    {
+      label: "考试大纲/参考书检索",
+      href: `https://www.bing.com/search?q=${outlineQuery}`,
+      title: `检索：${searchLabel} 考试大纲 参考书目`,
+    },
   ];
+}
+
+function buildYzLink(target) {
+  const params = new URLSearchParams();
+  const school = target.school.trim();
+  const major = target.major.trim();
+  if (school) params.set("dwmc", school);
+  if (major) params.set("zymc", major);
+  const query = params.toString();
+  return query ? `https://yz.chsi.com.cn/zsml/queryAction.do?${query}` : "https://yz.chsi.com.cn/zsml/";
 }
 
 function getSchoolStudyChecklist(target) {
@@ -424,7 +448,8 @@ function renderSchoolChecklist() {
     <div class="lookup-links">
       ${links
         .map(
-          (link) => `<a href="${escapeHtml(link.href)}" target="_blank" rel="noreferrer">${escapeHtml(link.label)}</a>`
+          (link) =>
+            `<a href="${escapeHtml(link.href)}" target="_blank" rel="noreferrer" title="${escapeHtml(link.title)}">${escapeHtml(link.label)}</a>`
         )
         .join("")}
     </div>
@@ -557,6 +582,15 @@ function updateSourceProof() {
   }
 }
 
+function updateTopYzLink() {
+  const target = getCurrentTarget();
+  const href = buildYzLink(target);
+  const label = [target.school, target.major].filter(Boolean).join(" · ");
+  el.topYzLink.href = href;
+  el.topYzLink.textContent = label ? "研招网当前目标" : "研招网目录";
+  el.topYzLink.title = label ? `打开研招网：${label}` : "打开研招网硕士专业目录";
+}
+
 function renderSavedTargets() {
   const targets = getTargets();
   if (!targets.length) {
@@ -632,6 +666,7 @@ async function extractPdfText(file) {
 function refreshAll() {
   updateCountdown();
   updateSourceProof();
+  updateTopYzLink();
   renderSchoolChecklist();
   renderModules();
   renderReport();
