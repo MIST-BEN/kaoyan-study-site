@@ -387,6 +387,59 @@ textarea:focus {
   gap: 12px;
 }
 
+.school-checklist {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.lookup-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lookup-links a {
+  min-height: 34px;
+  border: 1px solid #bfd0c4;
+  border-radius: 8px;
+  background: var(--surface-strong);
+  display: inline-flex;
+  align-items: center;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 0 10px;
+}
+
+.checklist-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.checklist-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.card-heading h3 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.25;
+}
+
 .module-card {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -421,6 +474,7 @@ textarea:focus {
 }
 
 .module-card ul,
+.checklist-card ul,
 .print-report ul,
 .print-report ol {
   margin: 0;
@@ -428,6 +482,7 @@ textarea:focus {
 }
 
 .module-card li,
+.checklist-card li,
 .print-report li {
   margin: 5px 0;
   line-height: 1.55;
@@ -512,6 +567,7 @@ textarea:focus {
   .field-grid,
   .subject-editor,
   .module-grid,
+  .checklist-grid,
   .report-meta,
   .countdown-metrics {
     grid-template-columns: 1fr;
@@ -547,7 +603,8 @@ textarea:focus {
 
   button,
   .button-link,
-  .topbar a {
+  .topbar a,
+  .lookup-links a {
     width: 100%;
   }
 

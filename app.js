@@ -23,6 +23,7 @@ const el = {
   daysLeft: document.querySelector("#daysLeft"),
   weeksLeft: document.querySelector("#weeksLeft"),
   phaseName: document.querySelector("#phaseName"),
+  schoolChecklist: document.querySelector("#schoolChecklist"),
   moduleGrid: document.querySelector("#moduleGrid"),
   report: document.querySelector("#report"),
   printReport: document.querySelector("#printReport"),
@@ -351,6 +352,100 @@ function getPoliticsPlan() {
   };
 }
 
+function buildSchoolLinks(target) {
+  const school = target.school || "目标院校";
+  const major = target.major ? ` ${target.major}` : "";
+  const query = encodeURIComponent(`${school}${major} 2027 硕士研究生 招生专业目录 考试科目 官网`);
+  const outlineQuery = encodeURIComponent(`${school}${major} 考研 考试大纲 参考书目 官网`);
+  return [
+    { label: "研招网硕士目录", href: "https://yz.chsi.com.cn/zsml/" },
+    { label: "学校专业目录检索", href: `https://www.bing.com/search?q=${query}` },
+    { label: "考试大纲/参考书检索", href: `https://www.bing.com/search?q=${outlineQuery}` },
+  ];
+}
+
+function getSchoolStudyChecklist(target) {
+  const schoolName = target.school || "目标院校";
+  const majorName = target.major || "目标专业待填写";
+  const english = target.englishSubject || "英语一/英语二待确认";
+  const math = target.mathSubject || "数学/综合待确认";
+  const professional = compactText(target.professionalSubjects) || "专业课代码、名称、大纲、参考书待确认";
+  const hasSchool = Boolean(target.school);
+
+  const sections = [
+    {
+      title: hasSchool ? `${schoolName} · ${majorName}` : "先输入目标学校",
+      tag: hasSchool ? "学校清单" : "待输入",
+      items: hasSchool
+        ? [
+            `到 ${schoolName} 研究生院/研招办官网确认招生专业目录。`,
+            "核对专业代码、研究方向、学习方式、统考/自命题考试科目。",
+            "把官方来源链接、PDF、截图保存到资料库，后续只按官方版本更新。",
+          ]
+        : ["在左侧输入学校名称后，这里会先列出官方目录、公共课、专业课和资料搜集任务。"],
+    },
+    {
+      title: "公共课先学",
+      tag: "必备",
+      items: [
+        "思想政治理论：马原、史纲、毛中特、思修法基、时政与选择题错题。",
+        `${english}：先从词汇、阅读、长难句、翻译/写作开始；确认英语一或英语二后按模块细化。`,
+        `${math}：确认是否考数学一、数学二、数学三、396，或不考数学；未确认前先不盲目买全套资料。`,
+      ],
+    },
+    {
+      title: "专业课要学",
+      tag: "学校决定",
+      items: [
+        professional,
+        "找到考试大纲后按章节拆任务：概念、题型、真题年份、参考书章节、错题复盘。",
+        "没有大纲时，先整理学校公开真题、参考书目、学院通知和复试细则。",
+      ],
+    },
+    {
+      title: "资料要搜集",
+      tag: "来源",
+      items: [
+        "招生简章、专业目录、考试大纲、参考书目、复试细则、拟录取名单。",
+        "历年真题和样题：按年份、题型、考点、错因建立索引。",
+        "把每条资料标注来源链接和发布日期，避免旧资料混进新计划。",
+      ],
+    },
+  ];
+
+  return sections;
+}
+
+function renderSchoolChecklist() {
+  const target = getCurrentTarget();
+  const sections = getSchoolStudyChecklist(target);
+  const links = buildSchoolLinks(target);
+  el.schoolChecklist.innerHTML = `
+    <div class="lookup-links">
+      ${links
+        .map(
+          (link) => `<a href="${escapeHtml(link.href)}" target="_blank" rel="noreferrer">${escapeHtml(link.label)}</a>`
+        )
+        .join("")}
+    </div>
+    <div class="checklist-grid">
+      ${sections
+        .map(
+          (section) => `
+            <article class="checklist-card">
+              <div class="card-heading">
+                <h3>${escapeHtml(section.title)}</h3>
+                <span class="tag">${escapeHtml(section.tag)}</span>
+              </div>
+              <ul>${section.items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
 function renderModules() {
   const english = getEnglishPlan(el.englishSubject.value);
   const math = getMathPlan(el.mathSubject.value);
@@ -375,6 +470,7 @@ function renderReport() {
   const english = getEnglishPlan(target.englishSubject);
   const math = getMathPlan(target.mathSubject);
   const professional = getProfessionalPlan(target.professionalSubjects);
+  const schoolChecklist = getSchoolStudyChecklist(target);
   const modules = [english, math, professional, getPoliticsPlan()].filter(Boolean);
   const sourceUrl = validUrl(target.sourceUrl) || "https://yz.chsi.com.cn/zsml/";
   const sourceLabel = target.sourceUrl || "研招网硕士目录入口";
@@ -393,6 +489,18 @@ function renderReport() {
     <h3>考试科目依据</h3>
     <p>本报告基于用户提供的学校官网、研招网或专业目录文本生成。自动识别只作为整理辅助，最终以招生单位官方公布的专业目录和考试大纲为准。</p>
     <p><strong>专业课/自命题：</strong>${escapeHtml(target.professionalSubjects || "待从官方目录补充")}</p>
+
+    <h3>输入学校后需要学习的内容</h3>
+    ${schoolChecklist
+      .map(
+        (section) => `
+          <section>
+            <h4>${escapeHtml(section.title)}</h4>
+            <ul>${section.items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+          </section>
+        `
+      )
+      .join("")}
 
     <h3>阶段学习路线</h3>
     <ol>
@@ -524,6 +632,7 @@ async function extractPdfText(file) {
 function refreshAll() {
   updateCountdown();
   updateSourceProof();
+  renderSchoolChecklist();
   renderModules();
   renderReport();
   renderSavedTargets();
