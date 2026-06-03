@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>考研目标学习站</title>
+    <meta
+      name="description"
+      content="基于学校官网或研招网来源，识别院校专业考试科目，并生成考研学习模块、资料清单和可打印 PDF 报告。"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">官方来源驱动</p>
+        <h1>考研目标学习站</h1>
+      </div>
+      <nav aria-label="常用入口">
+        <a href="https://yz.chsi.com.cn/zsml/" target="_blank" rel="noreferrer">研招网目录</a>
+        <a href="assets/kaoyan-study-guide.pdf" target="_blank" rel="noreferrer">通用讲义 PDF</a>
+        <button id="printReportTop" type="button" class="icon-button" title="打印当前目标报告" aria-label="打印当前目标报告">
+          打印报告
+        </button>
+      </nav>
+    </header>
+
+    <main class="app-shell">
+      <section class="panel input-panel" aria-labelledby="inputTitle">
+        <div class="section-title">
+          <p class="eyebrow">目标与来源</p>
+          <h2 id="inputTitle">选择院校和专业</h2>
+        </div>
+
+        <form id="targetForm" class="target-form">
+          <div class="field-grid">
+            <label>
+              <span>院校</span>
+              <input id="school" name="school" type="text" placeholder="例如：中国人民大学" autocomplete="organization" />
+            </label>
+            <label>
+              <span>专业</span>
+              <input id="major" name="major" type="text" placeholder="例如：金融、计算机技术" autocomplete="off" />
+            </label>
+            <label>
+              <span>考试年份</span>
+              <input id="examYear" name="examYear" type="number" min="2026" max="2035" value="2027" />
+            </label>
+            <label>
+              <span>倒计时日期</span>
+              <input id="examDate" name="examDate" type="date" value="2026-12-19" />
+            </label>
+          </div>
+
+          <label class="full-field">
+            <span>官方来源链接</span>
+            <input
+              id="sourceUrl"
+              name="sourceUrl"
+              type="url"
+              placeholder="粘贴学校研究生招生网、专业目录 PDF 或研招网链接"
+            />
+          </label>
+
+          <label class="full-field">
+            <span>粘贴专业目录或考试大纲文本</span>
+            <textarea
+              id="sourceText"
+              name="sourceText"
+              rows="8"
+              placeholder="示例：101思想政治理论 201英语一 301数学一 408计算机学科专业基础..."
+            ></textarea>
+          </label>
+
+          <div class="upload-row">
+            <label class="file-control">
+              <span>上传目录/大纲 PDF</span>
+              <input id="pdfFile" type="file" accept="application/pdf" />
+            </label>
+            <p id="pdfStatus" class="muted">上传后会尝试在浏览器内提取文字，失败时仍可粘贴文本。</p>
+          </div>
+
+          <div class="actions">
+            <button id="analyzeBtn" type="button" class="primary">识别考试科目</button>
+            <button id="saveBtn" type="button">保存目标方案</button>
+            <button id="clearBtn" type="button">清空</button>
+          </div>
+        </form>
+
+        <div class="saved-area">
+          <div class="section-title compact">
+            <p class="eyebrow">方案库</p>
+            <h2>已保存目标</h2>
+          </div>
+          <div id="savedTargets" class="saved-list" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section class="workspace" aria-live="polite">
+        <section class="countdown-band panel" aria-labelledby="countdownTitle">
+          <div>
+            <p class="eyebrow">2027 考研预计初试日</p>
+            <h2 id="countdownTitle">倒计时</h2>
+          </div>
+          <div class="countdown-metrics">
+            <div class="metric">
+              <strong id="daysLeft">--</strong>
+              <span>天</span>
+            </div>
+            <div class="metric">
+              <strong id="weeksLeft">--</strong>
+              <span>周</span>
+            </div>
+            <div class="metric">
+              <strong id="phaseName">待设置</strong>
+              <span>阶段</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel detection-panel" aria-labelledby="detectionTitle">
+          <div class="section-title">
+            <p class="eyebrow">半自动识别</p>
+            <h2 id="detectionTitle">考试科目确认</h2>
+          </div>
+
+          <div id="confidenceBanner" class="confidence needs-review">等待识别。粘贴官方目录文本后点击识别。</div>
+
+          <div class="subject-editor">
+            <label>
+              <span>英语科目</span>
+              <select id="englishSubject">
+                <option value="">未识别/不确定</option>
+                <option value="201 英语一">201 英语一</option>
+                <option value="204 英语二">204 英语二</option>
+              </select>
+            </label>
+            <label>
+              <span>数学/综合</span>
+              <select id="mathSubject">
+                <option value="">未识别/不确定</option>
+                <option value="301 数学一">301 数学一</option>
+                <option value="302 数学二">302 数学二</option>
+                <option value="303 数学三">303 数学三</option>
+                <option value="396 经济类综合能力">396 经济类综合能力</option>
+                <option value="不考数学">不考数学</option>
+              </select>
+            </label>
+          </div>
+
+          <label class="full-field">
+            <span>专业课/自命题科目</span>
+            <textarea
+              id="professionalSubjects"
+              rows="4"
+              placeholder="例如：408 计算机学科专业基础；431 金融学综合"
+            ></textarea>
+          </label>
+
+          <div class="source-proof">
+            <p class="muted">来源依据会进入报告。自动识别只是辅助，最终以学校官网或研招网公布内容为准。</p>
+            <a id="sourceProofLink" href="https://yz.chsi.com.cn/zsml/" target="_blank" rel="noreferrer">研招网硕士目录</a>
+          </div>
+        </section>
+
+        <section class="panel plan-panel" aria-labelledby="modulesTitle">
+          <div class="section-title">
+            <p class="eyebrow">学习模块</p>
+            <h2 id="modulesTitle">今日与阶段任务</h2>
+          </div>
+          <div id="moduleGrid" class="module-grid"></div>
+        </section>
+
+        <section class="panel report-panel" aria-labelledby="reportTitle">
+          <div class="section-title">
+            <p class="eyebrow">PDF 报告</p>
+            <h2 id="reportTitle">个性化打印视图</h2>
+          </div>
+          <div class="report-actions">
+            <button id="printReport" type="button" class="primary">打印/导出 PDF</button>
+            <a href="assets/kaoyan-study-guide.pdf" target="_blank" rel="noreferrer" class="button-link">打开通用讲义 PDF</a>
+          </div>
+          <article id="report" class="print-report"></article>
+        </section>
+      </section>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
+    <script src="app.js" defer></script>
+  </body>
+</html>
