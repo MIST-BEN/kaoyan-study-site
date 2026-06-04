@@ -3,6 +3,7 @@ const ACTIVE_KEY = "kaoyan-active-target-v1";
 const PUBLIC_CODES = new Set(["101", "199", "201", "204", "301", "302", "303", "396"]);
 
 const el = {
+  targetSearch: document.querySelector("#targetSearch"),
   school: document.querySelector("#school"),
   major: document.querySelector("#major"),
   majorCode: document.querySelector("#majorCode"),
@@ -34,6 +35,7 @@ const el = {
 };
 
 const defaultTarget = {
+  targetSearch: "",
   school: "",
   major: "",
   majorCode: "",
@@ -46,11 +48,51 @@ const defaultTarget = {
   professionalSubjects: "",
 };
 
+const CODE_OVERRIDES = {
+  "085406": {
+    id: "control-engineering",
+    title: "控制工程",
+    canonicalMajor: "控制工程",
+    codePatterns: [/^085406$/],
+    keywords: ["控制工程", "控制", "自动化", "自动控制"],
+    description: "085406 默认按控制工程整理资料。清华大学具体考试科目、专业课代码和参考书仍以当年官方专业目录、考试大纲为准。",
+    studyTopics: [
+      "自动控制原理",
+      "现代控制理论",
+      "线性系统理论",
+      "信号与系统",
+      "电路/电子技术按官方大纲确认",
+      "控制系统分析与设计",
+    ],
+    materials: [
+      "清华大学研究生招生网专业目录与考试科目",
+      "院系发布的考试大纲、样题或参考书目",
+      "自动控制原理教材、课后题和公式推导笔记",
+      "现代控制理论/线性系统章节笔记",
+      "信号与系统、电路或电子技术按官方大纲补充",
+      "历年专业课真题、回忆版题目和题型统计表",
+    ],
+    subjectHints: [
+      "自动控制原理（以官方大纲确认）",
+      "现代控制理论",
+      "线性系统",
+      "信号与系统",
+      "电路/电子技术",
+      "专业课代码和名称待从官方目录确认",
+    ],
+  },
+};
+
+const CODE_LABELS = {
+  "025100": "金融",
+  "085404": "计算机技术",
+};
+
 const MAJOR_PROFILES = [
   {
     id: "computer",
     title: "计算机 / 软件 / 人工智能",
-    codePatterns: [/^0812/, /^0835/, /^0854(04|05|10|11)?/, /^1405/],
+    codePatterns: [/^0812/, /^0835/, /^0854(00|04|05|10|11)$/, /^1405/],
     keywords: ["计算机", "软件", "人工智能", "网络空间", "大数据", "数据科学", "信息安全", "智能科学"],
     description: "优先确认是否考 408，或学校自命题的数据结构、计组、操作系统、计网组合。",
     studyTopics: ["数据结构与算法", "计算机组成原理", "操作系统", "计算机网络", "C/C++ 或算法编程能力"],
@@ -163,6 +205,37 @@ function extractMajorCode(value) {
   return match ? match[1] : "";
 }
 
+function inferMajorFromCode(code) {
+  return CODE_OVERRIDES[code]?.canonicalMajor || CODE_OVERRIDES[code]?.title || CODE_LABELS[code] || "";
+}
+
+function parseTargetSearch(value) {
+  const input = compactText(value).replace(/[，,；;|/]+/g, " ");
+  const match = input.match(/\d{4,6}/);
+  if (!match) {
+    return {
+      school: input,
+      majorCode: "",
+      major: "",
+    };
+  }
+
+  const majorCode = match[0];
+  const beforeCode = input.slice(0, match.index).replace(/[-_·]+/g, " ").trim();
+  const afterCode = input.slice(match.index + majorCode.length).replace(/[-_·]+/g, " ").trim();
+  return {
+    school: beforeCode,
+    majorCode,
+    major: afterCode || inferMajorFromCode(majorCode),
+  };
+}
+
+function buildTargetSearchValue(target) {
+  return [target.school, getMajorCode(target), target.major || inferMajorFromCode(getMajorCode(target))]
+    .filter(Boolean)
+    .join(" ");
+}
+
 function getMajorCode(target) {
   return (
     target.majorCode ||
@@ -178,8 +251,9 @@ function getMajorProfile(target) {
   const byKeyword = (profile) => profile.keywords.some((keyword) => haystack.includes(keyword.toLowerCase()));
   const byCode = (profile) => code && profile.codePatterns.some((pattern) => pattern.test(code));
   return (
-    MAJOR_PROFILES.find((profile) => byKeyword(profile)) ||
-    MAJOR_PROFILES.find((profile) => byCode(profile)) || {
+    CODE_OVERRIDES[code] ||
+    MAJOR_PROFILES.find((profile) => byCode(profile)) ||
+    MAJOR_PROFILES.find((profile) => byKeyword(profile)) || {
       id: "general",
       title: code ? `专业代码 ${code}` : "目标专业",
       description: "暂未匹配到固定方向，请以学校官网专业目录、考试大纲和参考书目为准。",
@@ -192,16 +266,21 @@ function getMajorProfile(target) {
 
 function buildMaterialSearchLinks(target) {
   const code = getMajorCode(target);
-  const label = [target.school, code, target.major].filter(Boolean).join(" ");
+  const major = target.major || inferMajorFromCode(code);
+  const label = [target.school, code, major].filter(Boolean).join(" ");
   const base = label || "目标院校 目标专业";
-  return [
+  const links = [
     {
-      label: "专业目录",
-      href: `https://www.bing.com/search?q=${encodeURIComponent(`${base} 硕士研究生 招生专业目录 官网`)}`,
+      label: "研招网专业目录",
+      href: buildYzLink({ ...target, major }),
     },
     {
-      label: "考试大纲",
-      href: `https://www.bing.com/search?q=${encodeURIComponent(`${base} 考研 考试大纲 官网`)}`,
+      label: "学校专业目录",
+      href: `https://www.bing.com/search?q=${encodeURIComponent(`${base} 硕士研究生 招生专业目录 考试科目 官网`)}`,
+    },
+    {
+      label: "考试大纲/样题",
+      href: `https://www.bing.com/search?q=${encodeURIComponent(`${base} 考研 考试大纲 样题 官网`)}`,
     },
     {
       label: "参考书目",
@@ -209,9 +288,26 @@ function buildMaterialSearchLinks(target) {
     },
     {
       label: "历年真题",
-      href: `https://www.bing.com/search?q=${encodeURIComponent(`${base} 考研 历年真题`)}`,
+      href: `https://www.bing.com/search?q=${encodeURIComponent(`${base} 考研 历年真题 回忆版 题型`)}`,
     },
   ];
+
+  if (/清华|tsinghua/i.test(target.school)) {
+    links.splice(
+      1,
+      0,
+      {
+        label: "清华研招网",
+        href: "https://yz.tsinghua.edu.cn/zsxx/sszs/ptzk.htm",
+      },
+      {
+        label: "清华院系公告",
+        href: `https://www.bing.com/search?q=${encodeURIComponent(`site:tsinghua.edu.cn ${base} 硕士 招生 考试大纲 参考书`)}`,
+      }
+    );
+  }
+
+  return links;
 }
 
 function getTargets() {
@@ -232,6 +328,7 @@ function setTargets(targets) {
 
 function getCurrentTarget() {
   return {
+    targetSearch: el.targetSearch.value.trim(),
     school: el.school.value.trim(),
     major: el.major.value.trim(),
     majorCode: el.majorCode.value.trim(),
@@ -247,9 +344,12 @@ function getCurrentTarget() {
 
 function applyTarget(target) {
   const data = { ...defaultTarget, ...target };
+  const code = data.majorCode || extractMajorCode(data.major || data.sourceText || "");
+  const major = data.major || inferMajorFromCode(code);
+  el.targetSearch.value = data.targetSearch || buildTargetSearchValue({ ...data, majorCode: code, major });
   el.school.value = data.school;
-  el.major.value = data.major;
-  el.majorCode.value = data.majorCode || extractMajorCode(data.major || data.sourceText || "");
+  el.major.value = major;
+  el.majorCode.value = code;
   el.examYear.value = data.examYear;
   el.examDate.value = data.examDate;
   el.sourceUrl.value = data.sourceUrl;
@@ -257,6 +357,15 @@ function applyTarget(target) {
   el.englishSubject.value = data.englishSubject;
   el.mathSubject.value = data.mathSubject;
   el.professionalSubjects.value = data.professionalSubjects;
+  persistActive();
+  refreshAll();
+}
+
+function applyTargetSearch() {
+  const parsed = parseTargetSearch(el.targetSearch.value);
+  if (parsed.school) el.school.value = parsed.school;
+  if (parsed.majorCode) el.majorCode.value = parsed.majorCode;
+  if (parsed.majorCode) el.major.value = parsed.major;
   persistActive();
   refreshAll();
 }
@@ -507,8 +616,8 @@ function getPoliticsPlan() {
 
 function buildSchoolLinks(target) {
   const school = target.school.trim();
-  const major = target.major.trim();
   const code = getMajorCode(target);
+  const major = target.major.trim() || inferMajorFromCode(code);
   const searchLabel = [school || "目标院校", code, major].filter(Boolean).join(" ");
   const query = encodeURIComponent(`${searchLabel} 2027 硕士研究生 招生专业目录 考试科目 官网`);
   const outlineQuery = encodeURIComponent(`${searchLabel} 考研 考试大纲 参考书目 官网`);
@@ -534,8 +643,8 @@ function buildSchoolLinks(target) {
 function buildYzLink(target) {
   const params = new URLSearchParams();
   const school = target.school.trim();
-  const major = target.major.trim();
   const code = getMajorCode(target);
+  const major = target.major.trim() || inferMajorFromCode(code);
   if (school) params.set("dwmc", school);
   if (major || code) params.set("zymc", [code, major].filter(Boolean).join(" "));
   const query = params.toString();
@@ -544,8 +653,8 @@ function buildYzLink(target) {
 
 function getSchoolStudyChecklist(target) {
   const schoolName = target.school || "目标院校";
-  const majorName = target.major || "目标专业待填写";
   const code = getMajorCode(target);
+  const majorName = target.major || inferMajorFromCode(code) || "目标专业待填写";
   const profile = getMajorProfile(target);
   const english = target.englishSubject || "英语一/英语二待确认";
   const math = target.mathSubject || "数学/综合待确认";
@@ -600,35 +709,60 @@ function renderTargetMaterials() {
   const target = getCurrentTarget();
   const code = getMajorCode(target);
   const profile = getMajorProfile(target);
+  const major = target.major || inferMajorFromCode(code) || profile.title;
   const links = buildMaterialSearchLinks(target);
-  const heading = [target.school || "目标院校", code, target.major || profile.title].filter(Boolean).join(" · ");
+  const heading = [target.school || "目标院校", code, major].filter(Boolean).join(" · ");
+  const packetTitle = `${heading}资料包`;
   el.targetMaterials.innerHTML = `
     <article class="materials-summary">
       <div>
-        <p class="eyebrow">对应资料</p>
-        <h3>${escapeHtml(heading)}</h3>
+        <p class="eyebrow">当前专业资料包</p>
+        <h3>${escapeHtml(packetTitle)}</h3>
         <p>${escapeHtml(profile.description)}</p>
       </div>
-      <span class="tag">${escapeHtml(profile.title)}</span>
+      <span class="tag">${escapeHtml(code || "待确认代码")}</span>
     </article>
     <div class="materials-grid">
       <article class="material-card">
-        <h3>你现在要学</h3>
-        <ul>${profile.studyTopics.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
-      </article>
-      <article class="material-card">
-        <h3>对应学习资料</h3>
-        <ul>${profile.materials.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
-      </article>
-      <article class="material-card">
-        <h3>可能考试科目</h3>
-        <ul>${profile.subjectHints.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
-      </article>
-      <article class="material-card">
-        <h3>按当前目标去找</h3>
+        <h3>官方来源入口</h3>
+        <p class="muted">先确认专业目录、考试科目、考试大纲和参考书，后续资料都围绕官方版本整理。</p>
         <div class="material-links">
           ${links.map((link) => `<a href="${escapeHtml(link.href)}" target="_blank" rel="noreferrer">${escapeHtml(link.label)}</a>`).join("")}
         </div>
+      </article>
+      <article class="material-card">
+        <h3>专业课要学</h3>
+        <ul>${profile.studyTopics.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+      </article>
+      <article class="material-card">
+        <h3>专业课资料清单</h3>
+        <ul>${profile.materials.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+      </article>
+      <article class="material-card">
+        <h3>初试科目确认</h3>
+        <ul>${profile.subjectHints.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+      </article>
+      <article class="material-card">
+        <h3>历年真题搜集表</h3>
+        <table class="mini-table">
+          <thead><tr><th>年份</th><th>来源</th><th>状态</th></tr></thead>
+          <tbody>
+            <tr><td>近 5 年</td><td>学校官网/院系公告</td><td>先找官方公开版</td></tr>
+            <tr><td>近 10 年</td><td>图书馆、学长学姐回忆版、公开资料</td><td>标注来源与可信度</td></tr>
+            <tr><td>重复题型</td><td>真题索引表</td><td>整理考点、题型、难度</td></tr>
+          </tbody>
+        </table>
+      </article>
+      <article class="material-card">
+        <h3>参考书/大纲整理</h3>
+        <table class="mini-table">
+          <thead><tr><th>资料</th><th>处理方式</th></tr></thead>
+          <tbody>
+            <tr><td>考试大纲</td><td>拆成章节、知识点和题型</td></tr>
+            <tr><td>参考书</td><td>建立章节进度和课后题记录</td></tr>
+            <tr><td>复试细则</td><td>同步记录专业课、面试和机试要求</td></tr>
+          </tbody>
+        </table>
       </article>
     </div>
   `;
@@ -688,90 +822,110 @@ function renderReport() {
   const target = getCurrentTarget();
   const code = getMajorCode(target);
   const profile = getMajorProfile(target);
+  const major = target.major || inferMajorFromCode(code) || profile.title;
   const materialLinks = buildMaterialSearchLinks(target);
-  const english = getEnglishPlan(target.englishSubject);
-  const math = getMathPlan(target.mathSubject);
-  const professional = getProfessionalPlan(target.professionalSubjects);
-  const schoolChecklist = getSchoolStudyChecklist(target);
-  const modules = [english, math, professional, getPoliticsPlan()].filter(Boolean);
   const sourceUrl = validUrl(target.sourceUrl) || "https://yz.chsi.com.cn/zsml/";
   const sourceLabel = target.sourceUrl || "研招网硕士目录入口";
+  const packetName = [target.school || "目标院校", code, major].filter(Boolean).join(" ");
+  const examYear = Number.parseInt(target.examYear, 10) || 2027;
+  const pastYears = Array.from({ length: 6 }, (_, index) => examYear - 1 - index);
+  const sourceLinks = [
+    { label: sourceLabel, href: sourceUrl },
+    ...materialLinks,
+  ];
 
   el.report.innerHTML = `
-    <h2>${escapeHtml(target.examYear)} 考研目标学习报告</h2>
+    <h2>${escapeHtml(target.examYear)} ${escapeHtml(packetName || "目标专业")}考研资料包</h2>
     <div class="report-meta">
       <div><strong>院校：</strong>${escapeHtml(target.school || "待填写")}</div>
-      <div><strong>专业：</strong>${escapeHtml(target.major || "待填写")}</div>
+      <div><strong>专业：</strong>${escapeHtml(major || "待填写")}</div>
       <div><strong>专业代码：</strong>${escapeHtml(code || "待填写")}</div>
-      <div><strong>倒计时日期：</strong>${escapeHtml(target.examDate || "2026-12-19")}</div>
-      <div><strong>官方来源：</strong><a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noreferrer">${escapeHtml(sourceLabel)}</a></div>
+      <div><strong>资料包类型：</strong>专业课资料、历年真题、参考书与大纲整理</div>
+      <div><strong>首要来源：</strong><a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noreferrer">${escapeHtml(sourceLabel)}</a></div>
       <div><strong>英语：</strong>${escapeHtml(target.englishSubject || "待确认")}</div>
       <div><strong>数学/综合：</strong>${escapeHtml(target.mathSubject || "待确认")}</div>
     </div>
 
-    <h3>考试科目依据</h3>
-    <p>本报告基于用户提供的学校官网、研招网或专业目录文本生成。自动识别只作为整理辅助，最终以招生单位官方公布的专业目录和考试大纲为准。</p>
-    <p><strong>专业课/自命题：</strong>${escapeHtml(target.professionalSubjects || "待从官方目录补充")}</p>
+    <h3>官方来源链接</h3>
+    <p>先从官方目录确认考试科目、专业课代码、参考书和大纲；非官方真题只作为补充，必须记录来源。</p>
+    <ul>
+      ${sourceLinks
+        .map((link) => `<li><a href="${escapeHtml(link.href)}" target="_blank" rel="noreferrer">${escapeHtml(link.label)}</a></li>`)
+        .join("")}
+    </ul>
 
-    <h3>按专业代码匹配的学习资料</h3>
-    <p><strong>${escapeHtml(profile.title)}：</strong>${escapeHtml(profile.description)}</p>
-    <section>
-      <h4>你现在要学</h4>
-      <ul>${profile.studyTopics.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
-    </section>
-    <section>
-      <h4>对应学习资料</h4>
-      <ul>${profile.materials.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
-    </section>
-    <section>
-      <h4>资料检索入口</h4>
-      <ul>${materialLinks.map((link) => `<li><a href="${escapeHtml(link.href)}" target="_blank" rel="noreferrer">${escapeHtml(link.label)}</a></li>`).join("")}</ul>
-    </section>
-
-    <h3>输入学校后需要学习的内容</h3>
-    ${schoolChecklist
-      .map(
-        (section) => `
-          <section>
-            <h4>${escapeHtml(section.title)}</h4>
-            <ul>${section.items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
-          </section>
-        `
-      )
-      .join("")}
-
-    <h3>阶段学习路线</h3>
-    <ol>
-      <li>基础阶段：确认考试科目、建立资料库、完成教材或基础课程第一轮。</li>
-      <li>强化阶段：按科目专题刷题，建立错题和知识缺口清单。</li>
-      <li>真题阶段：按年份整套训练，复盘命题规律和时间分配。</li>
-      <li>冲刺阶段：压缩笔记、背诵高频内容、完成模拟和查漏补缺。</li>
-    </ol>
-
-    <h3>科目任务</h3>
-    ${modules
-      .map(
-        (module) => `
-          <section>
-            <h4>${escapeHtml(module.title)}</h4>
-            <ul>${module.tasks.map((task) => `<li>${escapeHtml(task)}</li>`).join("")}</ul>
-          </section>
-        `
-      )
-      .join("")}
-
-    <h3>资料搜集清单</h3>
+    <h3>初试科目确认表</h3>
     <table class="resource-table">
       <thead>
-        <tr><th>资料</th><th>用途</th><th>状态</th></tr>
+        <tr><th>科目</th><th>当前记录</th><th>处理方式</th></tr>
       </thead>
       <tbody>
-        <tr><td>学校官网专业目录</td><td>确认考试科目、专业代码、研究方向</td><td>必须保留链接或截图</td></tr>
-        <tr><td>考试大纲/参考书目</td><td>确认专业课范围和题型</td><td>按章节拆成任务</td></tr>
-        <tr><td>历年真题</td><td>判断重点、难度和重复考点</td><td>建立年份索引</td></tr>
-        <tr><td>错题与复盘表</td><td>追踪薄弱点</td><td>每周更新</td></tr>
+        <tr><td>思想政治理论</td><td>101 思想政治理论</td><td>按全国统考公共课准备，仍以专业目录为准。</td></tr>
+        <tr><td>英语</td><td>${escapeHtml(target.englishSubject || "待确认")}</td><td>确认英语一/英语二后再选真题和作文资料。</td></tr>
+        <tr><td>数学/综合</td><td>${escapeHtml(target.mathSubject || "待确认")}</td><td>确认数学一/二/三、396 或不考数学，避免买错资料。</td></tr>
+        <tr><td>专业课/自命题</td><td>${escapeHtml(target.professionalSubjects || profile.subjectHints.join("；"))}</td><td>只按学校官网目录和考试大纲最终确认。</td></tr>
       </tbody>
     </table>
+
+    <h3>专业课资料清单</h3>
+    <table class="resource-table">
+      <thead>
+        <tr><th>资料</th><th>用途</th><th>获取/整理方式</th></tr>
+      </thead>
+      <tbody>
+        ${profile.materials
+          .map(
+            (item) =>
+              `<tr><td>${escapeHtml(item)}</td><td>用于 ${escapeHtml(major)} 专业课复习</td><td>优先找官方公开版；非官方资料标注来源和年份。</td></tr>`
+          )
+          .join("")}
+      </tbody>
+    </table>
+
+    <h3>历年真题搜集表</h3>
+    <table class="resource-table">
+      <thead>
+        <tr><th>年份</th><th>来源</th><th>题型/考点</th><th>难度</th><th>状态</th></tr>
+      </thead>
+      <tbody>
+        ${pastYears
+          .map(
+            (year) =>
+              `<tr><td>${year}</td><td>官网/院系公告/公开回忆版</td><td>待记录</td><td>待评估</td><td>待搜集</td></tr>`
+          )
+          .join("")}
+      </tbody>
+    </table>
+
+    <h3>参考书/大纲整理表</h3>
+    <table class="resource-table">
+      <thead>
+        <tr><th>模块</th><th>对应资料</th><th>整理动作</th></tr>
+      </thead>
+      <tbody>
+        ${profile.studyTopics
+          .map(
+            (topic) =>
+              `<tr><td>${escapeHtml(topic)}</td><td>官方大纲、参考书章节、课后题</td><td>建立章节清单、公式/概念卡和错题索引。</td></tr>`
+          )
+          .join("")}
+      </tbody>
+    </table>
+
+    <h3>每周资料处理与复盘表</h3>
+    <table class="resource-table">
+      <thead>
+        <tr><th>任务</th><th>完成标准</th><th>备注</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>官方来源更新</td><td>检查专业目录、考试大纲、参考书是否有新版。</td><td>保存链接、发布日期和截图。</td></tr>
+        <tr><td>专业课资料处理</td><td>完成 1 个章节资料归档、课后题或专题题。</td><td>标注未掌握知识点。</td></tr>
+        <tr><td>真题整理</td><td>录入至少 1 年真题或 1 类题型。</td><td>记录考点、题型、难度和二刷日期。</td></tr>
+        <tr><td>错题复盘</td><td>更新错因、正确解法和关联章节。</td><td>下周优先回看高频错点。</td></tr>
+      </tbody>
+    </table>
+
+    <p class="copyright-note">版权说明：本资料包只整理官方链接、检索入口和学习清单，不复制或内置受版权保护的真题原文。</p>
   `;
 }
 
@@ -813,16 +967,20 @@ function renderSavedTargets() {
 
   el.savedTargets.innerHTML = targets
     .map(
-      (target, index) => `
+      (target, index) => {
+        const code = getMajorCode(target) || target.majorCode || "";
+        const major = target.major || inferMajorFromCode(code) || "未命名专业";
+        return `
         <article class="saved-card">
-          <strong>${escapeHtml(target.school || "未命名院校")} · ${escapeHtml(getMajorCode(target) || target.majorCode || "")} ${escapeHtml(target.major || "未命名专业")}</strong>
+          <strong>${escapeHtml(target.school || "未命名院校")} · ${escapeHtml(code)} ${escapeHtml(major)}</strong>
           <p>${escapeHtml(target.englishSubject || "英语待确认")} / ${escapeHtml(target.mathSubject || "数学待确认")}</p>
           <div class="saved-actions">
             <button type="button" data-load="${index}">载入</button>
             <button type="button" data-delete="${index}">删除</button>
           </div>
         </article>
-      `
+      `;
+      }
     )
     .join("");
 }
@@ -845,7 +1003,7 @@ function saveTarget() {
 function clearForm() {
   applyTarget(defaultTarget);
   el.confidenceBanner.className = "confidence needs-review";
-  el.confidenceBanner.textContent = "已清空。请填写目标并粘贴官方来源文本。";
+  el.confidenceBanner.textContent = "已清空。请填写目标并粘贴官方来源文本，生成专业资料包。";
 }
 
 async function extractPdfText(file) {
@@ -888,6 +1046,8 @@ function refreshAll() {
 }
 
 function bindEvents() {
+  el.targetSearch.addEventListener("input", applyTargetSearch);
+  el.targetSearch.addEventListener("change", applyTargetSearch);
   el.analyzeBtn.addEventListener("click", analyzeSource);
   el.saveBtn.addEventListener("click", saveTarget);
   el.clearBtn.addEventListener("click", clearForm);
